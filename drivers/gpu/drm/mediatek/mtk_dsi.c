@@ -1068,10 +1068,19 @@ static void mtk_dsi_ps_control_vact(struct mtk_dsi *dsi)
 		if (dsc_params->slice_mode == 1)
 			ps_wc *= 2;
 
-		SET_VAL_MASK(value, mask, ps_wc, DSI_PS_WC);
-		SET_VAL_MASK(value, mask, 5, DSI_PS_SEL);
-
-		size = (height << 16) + (ps_wc / 3);
+	switch (dsi->format) {
+	case MIPI_DSI_FMT_RGB888:
+		ps_bpp_mode |= PACKED_PS_24BIT_RGB888;
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		ps_bpp_mode |= LOOSELY_PS_24BIT_RGB666;
+		break;
+	case MIPI_DSI_FMT_RGB666_PACKED:
+		ps_bpp_mode |= PACKED_PS_18BIT_RGB666;
+		break;
+	case MIPI_DSI_FMT_RGB565:
+		ps_bpp_mode |= PACKED_PS_16BIT_RGB565;
+		break;
 	}
 
 	writel(height, dsi->regs + DSI_VACT_NL);
@@ -1120,6 +1129,35 @@ static void mtk_dsi_rxtx_control(struct mtk_dsi *dsi)
 #endif
 
 	writel(tmp_reg, dsi->regs + DSI_TXRX_CTRL);
+}
+
+static void mtk_dsi_ps_control(struct mtk_dsi *dsi)
+{
+	u32 dsi_tmp_buf_bpp;
+	u32 tmp_reg;
+
+	switch (dsi->format) {
+	case MIPI_DSI_FMT_RGB888:
+		tmp_reg = PACKED_PS_24BIT_RGB888;
+		dsi_tmp_buf_bpp = 3;
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		tmp_reg = LOOSELY_PS_24BIT_RGB666;
+		dsi_tmp_buf_bpp = 3;
+		break;
+	case MIPI_DSI_FMT_RGB666_PACKED:
+		tmp_reg = PACKED_PS_18BIT_RGB666;
+		dsi_tmp_buf_bpp = 3;
+		break;
+	case MIPI_DSI_FMT_RGB565:
+		tmp_reg = PACKED_PS_16BIT_RGB565;
+		dsi_tmp_buf_bpp = 2;
+		break;
+	default:
+		tmp_reg = PACKED_PS_24BIT_RGB888;
+		dsi_tmp_buf_bpp = 3;
+		break;
+	}
 
 	/* need to config for cmd mode to transmit frame data to DDIC */
 	writel(DSI_WMEM_CONTI, dsi->regs + DSI_MEM_CONTI);
